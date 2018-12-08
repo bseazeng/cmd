@@ -1,1 +1,6 @@
-在/etc/default/grub文件中找到 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"，然后屏蔽这段内容，在这句话的下面添加： GRUB_CMDLINE_LINUX_DEFAULT="text"，然后保存退出：
+ubuntu16.04
+关掉图形界面启动命令：
+systemctl disable lightdm.service
+
+开启图形界面命令：
+ln -s /lib/systemd/system/lightdm.service /etc/systemd/system/display-manager.service
