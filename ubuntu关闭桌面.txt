@@ -1,0 +1,1 @@
+在/etc/default/grub文件中找到 GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"，然后屏蔽这段内容，在这句话的下面添加： GRUB_CMDLINE_LINUX_DEFAULT="text"，然后保存退出：

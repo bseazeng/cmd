@@ -1,0 +1,101 @@
+https://nathanpfry.com/how-to-customize-an-ubuntu-installation-disc/
+
+1. Install ubuntu-16.04.5-desktop-amd64.iso with VMware on Windows,and the user of this system is 'zh'.
+2. Install ssh in ubuntu-16.04.5-desktop installed in VMware,and check ip of it.
+    sudo apt-get install ssh
+    sudo ifconfig 
+3. Use putty.exe installed in Windows to connected with the IP of ubuntu-16.04.5-desktop.Now We could execute commands in putty window.
+4. Install samba server in ubuntu-16.04.5-desktop.Then configure the file '/etc/samba/smb.conf'
+    sudo apt-get install samba
+    sudo vi /etc/samba/smb.conf
+    {
+    [DiskShare]
+        comment = Share Disk to Windows
+        path = /sdb/
+        browseable = yes
+        writable = yes
+        public = yes
+        valid users=zh
+
+    }
+    sudo smbpasswd  -a  zh
+    sudo /etc/init.d/smbd restart 
+    sudo vi /etc/sudoers
+    {
+        zh ALL=(ALL) ALL
+    }
+5.  Mount a virtual Disk to '/sdb' .
+    sudo mount /dev/sdb1 /sdb/
+    cd /sdb/
+6. Create a folder.
+    sudo mkdir -p custom-img
+    sudo chown zh:zh -R custom-img
+7. Copy ISO(ubuntu-16.04.5-desktop-amd64.iso) from Windows to custom-img .
+    
+8. extract the contents of disc image.
+    cd custom-img
+    mkdir mnt
+    sudo mount -o loop ubuntu-16.04.5-desktop-amd64.iso mnt
+    mkdir extract
+    sudo rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract
+9. Extract the filesystem with the following commands.
+    sudo unsquashfs mnt/casper/filesystem.squashfs
+    sudo mv squashfs-root edit
+10. Need network access. 
+    sudo cp /etc/resolv.conf edit/etc/ 
+11.Mount a few important working directories:
+    sudo mount --bind /dev/ edit/dev
+    sudo chroot edit
+    mount -t proc none /proc
+    mount -t sysfs none /sys
+    mount -t devpts none /dev/pts
+12.Now you are actually logged in to the installation instance as root. Neat. Before making changes, a few commands will make sure that everything goes smoothly while modifying packages.  
+    export HOME=/root
+    export LC_ALL=C
+    dbus-uuidgen > /var/lib/dbus/machine-id
+    dpkg-divert --local --rename --add /sbin/initctl
+    ln -s /bin/true /sbin/initctl
+13. Custom(delete) packages.
+     apt-get purge package1 package2 package3  
+14. I need multiarch (i386) support
+    dpkg --add-architecture i386
+15. Update the software repositories and upgrade the remaining packages on the system
+    apt-get update && apt-get upgrade
+16.  Add packages to the system the usual way:   
+    apt-get install package1 package2 package3
+17. Time to clean up:
+    apt-get autoremove && apt-get autoclean
+    rm -rf /tmp/* ~/.bash_history
+    rm /var/lib/dbus/machine-id
+    rm /sbin/initctl
+    dpkg-divert --rename --remove /sbin/initctl
+
+    umount /proc || umount -lf /proc
+    umount /sys
+    umount /dev/pts
+    exit
+    sudo umount edit/dev
+18.Generate a new file manifest:
+    sudo chmod +w extract/casper/filesystem.manifest
+
+    sudo chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' | sudo tee extract/casper/filesystem.manifest
+
+    sudo cp extract/casper/filesystem.manifest extract/casper/filesystem.manifest-desktop
+
+    sudo sed -i '/ubiquity/d' extract/casper/filesystem.manifest-desktop
+
+    sudo sed -i '/casper/d' extract/casper/filesystem.manifest-desktop
+    
+19.Compress the filesystem:
+    sudo mksquashfs edit extract/casper/filesystem.squashfs -b 1048576
+20.Update filesystem size (needed by the installer):
+    printf $(sudo du -sx --block-size=1 edit | cut -f1) | sudo tee extract/casper/filesystem.size
+    
+21.Delete the old md5sum:    
+    cd extract
+    sudo rm md5sum.txt
+22.generate a fresh one: (single command, copy and paste in one piece)
+   find -type f -print0 | sudo xargs -0 md5sum | grep -v isolinux/boot.cat | sudo tee md5sum.txt
+
+23.create the ISO
+sudo genisoimage -D -r -V "$IMAGE_NAME" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../ubuntu16-zh-custom-image-`date +"%Y-%m-%d"`.iso .
