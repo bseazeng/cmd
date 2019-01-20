@@ -1,0 +1,41 @@
+openSUSE system.
+cd /sdb/
+git clone 
+cd /sdb/kiwi
+awk '/BuildRequires:/ { print $2 | "sort" }' rpm/kiwi.spec
+{
+btrfsprogs
+diffutils
+e2fsprogs
+fdupes
+gcc-c++
+genisoimage
+genisoimage
+libxslt
+lvm2
+module-init-tools
+perl-Class-Singleton
+perl-Config-IniFiles
+perl-Digest-SHA1
+perl-File-Slurp
+perl-JSON
+perl-Readonly
+perl-Test-Unit-Lite
+perl-XML-LibXML
+perl-XML-LibXML-Common
+perl-XML-SAX
+perl-libwww-perl
+rsync
+screen
+squashfs
+syslinux
+zlib-devel
+zypper
+
+}
+
+cd /sdb/kiwi_workspace/
+mkdir -p /sdb/kiwi_image
+cp /usr/share/kiwi/image/*  /sdb/kiwi_image/ -a
+
+kiwi --build /sdb/kiwi_image/suse-13.2-JeOS -d /sdb/kiwi_workspace/tmp/myiso-result --type iso

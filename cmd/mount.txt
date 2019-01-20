@@ -1,0 +1,22 @@
+sudo -s
+apt-get install cifs-utils
+mount.cifs -o username="administrator",password="13880218791" //192.168.1.3/linux_share /mnt/
+
+apt-get install libncurses5-dev
+apt-get install gcc
+apt-get install make
+apt-get install libssl-dev
+
+sudo add-apt-repository ppa:mutse-young/remastersys
+sudo apt-get update
+sudo apt-get install remastersys
+
+cd /mnt/linux_kernel
+xz -d linux-4.9.9.tar.xz|tar xvf -
+
+cd linux-4.9.9
+make mrproper
+cp /boot/config-4.13.0-21-generic ./.config
+make oldconfig
+time make bzImage -j2
+time make modules -j2

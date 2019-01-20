@@ -1,0 +1,4 @@
+mkdir -p /tmp/disk_f/
+mount -t nfs -o nolock 192.168.1.3:/Disk_F/code /tmp/disk_f/
+
+sudo mount /dev/sdb1 /sdb

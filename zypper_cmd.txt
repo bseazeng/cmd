@@ -1,0 +1,50 @@
+1. 安装包
+zypper install  package1
+
+2. 安装源码包
+zypper source-install package1
+
+3. 更新包
+zypper update
+
+4. 删除包
+zypper remove  package1
+
+5. 查找包
+zypper search  package1
+
+6. 查看软件包详情
+
+zypper info package1
+
+7. 打补丁
+查看所有可打补丁: zypper patches
+安装指定补丁：zypper patch
+
+8. 锁住包(add lock)
+zypper al package1
+
+9. 解锁包(remove lock)
+zypper rl package1
+
+10. 用zypper添加库
+zypper addrepo
+
+11. 创建本地库
+zypper addrepo
+
+12. 查看库
+zypper lr
+
+14. 库重命名
+zypper renamerepo
+
+15. 删除库
+zypper removerepo
+
+
+18. 禁用/使用库
+zypper modifyrepo -d
+
+19. 刷新库
+zypper refresh

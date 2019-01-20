@@ -1,0 +1,25 @@
+ sudo zypper install kiwi
+ sudo zypper install kiwi-doc
+ sudo zypper install kiwi-templates kiwi-desc-vmxboot kiwi-desc-usbboot kiwi-desc-isoboot kiwi-desc-xenboot kiwi-desc-oemboot squashfs
+ 
+ cd /usr/share/kiwi
+ 
+ sudo zypper install samba
+ 
+ sudo vi /etc/samba/smb.conf
+ {
+ [DiskShare]
+        comment = Disk Share
+        path = /sdb/
+        writeable = yes
+        valid users = zh
+        browseable =yes
+
+ }
+ sudo service smb start
+ 
+ sudo smbpasswd -a zh
+ 
+ sudo mount /dev/sdb1 /sdb/
+ 
+ sudo chkconfig

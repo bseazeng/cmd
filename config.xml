@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+ 
+
+<image schemaversion="6.2" name="initrd-isoboot-suse-SLES12">
+
+    <description type="boot">
+
+        <author>Marcus Schaefer</author>
+
+        <contact>ms@novell.com</contact>
+
+        <specification>boot/initrd image used for LiveDVD media</specification>
+
+    </description>
+
+    <preferences>
+
+        <type image="vmx" filesystem="ext3" boot="vmxboot/suse-SLES12" format="vhd" bootprofile="default" bootkernel="std" bootloader="grub2"/>
+
+        <version>2.1.2</version>
+
+        <packagemanager>zypper</packagemanager>
+
+        <rpm-check-signatures>false</rpm-check-signatures>
+
+        <locale>en_US</locale>
+
+        <keytable>us.map.gz</keytable>
+
+        <timezone>UTC</timezone>
+
+        <hwclock>utc</hwclock>
+
+    </preferences>
+
+    <profiles>
+
+        <profile name="default" description="Booting default setup"/>
+
+    </profiles>
+
+    <users group="root"> 
+
+        <user home="/root" name="root" password="Huawei@123" pwdformat="plain" realname="root"/>
+
+    </users>
+
+    <repository type="yast2" alias="SLE-12-Server" status="replaceable">
+
+        <source path="iso:///root/iso/SLE-12-Server-DVD-x86_64-GM-DVD1.iso"/>
+
+    </repository>
+
+    <packages type="bootstrap">
+
+        <package name="filesystem"/>
+
+    </packages>
+
+    <packages type="image">
+
+        <package name="grub2"/>
+
+        <package name="kernel"/>
+
+        <package name="screen"/>
+
+        <package name="vim-enhanced"/>
+
+        <package name="traceroute"/>
+
+        <package name="lsof"/>
+
+        <package name="strace"/>
+
+        <package name="telnet"/>
+
+    </packages>
+
+    <packages type="delete">
+
+        <package name="cracklib-dict-full"/>
+
+        <package name="cyrus-sasl"/>
+
+    </packages>
+
+</image>

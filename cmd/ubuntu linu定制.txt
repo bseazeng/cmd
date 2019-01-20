@@ -1,0 +1,245 @@
+使用网路上下载好的ubuntu-17.10.1-desktop-amd64.iso 安装到vmware后，定制ISO操作命令如下：
+
+##root用户权限操作
+sudo -s
+
+##下载好的iso共享到安装好的系统上
+mount.cifs -o username="administrator",password="13880218791" //192.168.1.3/linux_share /mnt/
+
+##安装必备软件aptitude
+apt install aptitude
+aptitude install squashfs-tools genisoimage
+
+mkdir ~/live
+cp /mnt/ubuntu-17.10.1-desktop-amd64.iso ~/live
+cd ~/live
+mkdir mnt
+mount -o loop ubuntu-17.10.1-desktop-amd64.iso mnt
+mkdir extract-cd
+rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract-cd
+
+##提取并解压squashfs文件系统
+unsquashfs mnt/casper/filesystem.squashfs
+mv squashfs-root edit
+
+##准备并虚拟根目录。
+cp /etc/resolv.conf edit/etc/
+
+##可能需要复制hosts文件
+cp /etc/hosts edit/etc/
+
+##挂载相关目录：
+mount --bind /dev/ edit/dev
+chroot edit
+mount -t proc none /proc
+mount -t sysfs none /sys
+mount -t devpts none /dev/pts
+
+
+##为了避免区域问题以及导入 GPG keys：
+export HOME=/root
+export LC_ALL=C
+
+
+##为chroot环境配置软件源。在安装和升级系统之前需要运行
+dbus-uuidgen > /var/lib/dbus/machine-id
+dpkg-divert --local --rename --add /sbin/initctl
+ln -s /bin/true /sbin/initctl
+
+##定制软件包。查看已安装的软件包：
+dpkg-query -W --showformat='${Installed-Size} ${Package}\n' |sort -nr | less
+##删除不要的包：
+aptitude purge language-pack-gnome-pt-base
+aptitude purge language-pack-gnome-de-base
+aptitude purge gnome-getting-started-docs
+aptitude purge language-pack-gnome-fr-base
+aptitude purge language-pack-gnome-es-base
+aptitude purge language-pack-gnome-ru-base
+aptitude purge language-pack-gnome-zh-hans-base
+aptitude purge language-pack-gnome-it-base
+aptitude purge language-pack-gnome-en-base
+aptitude purge gnome-user-docs
+aptitude purge gnome-accessibility-themes
+aptitude purge gnome-orca
+aptitude purge gnome-control-center
+aptitude purge gnome-mahjongg
+aptitude purge gnome-keyring
+aptitude purge gnome-user-docs-pt
+aptitude purge gnome-user-docs-de
+aptitude purge gnome-software-common
+aptitude purge gnome-software
+aptitude purge gnome-calculator
+aptitude purge gnome-sudoku
+aptitude purge network-manager-gnome
+aptitude purge gnome-user-docs-fr
+aptitude purge gnome-system-monitor
+aptitude purge gnome-user_docs-ru
+aptitude purge gnome-shell-common
+aptitude purge gnome-mines
+aptitude purge gnome-settings-daemon
+aptitude purge gnome-control-center-data
+aptitude purge gnome-terminalo-data
+aptitude purge gnome-user-docs-it
+aptitude purge gnome-user-docs-zh-hans
+aptitude purge gnome-calendar
+aptitude purge gnome-user-share
+aptitude purge gnome-online-accounts
+aptitude purge gnome-logs
+aptitude purge gnome-terminal
+aptitude purge gnome-session-bin
+aptitude purge gnome-desktop3-data
+aptitude purge gnome-screensaver
+aptitude purge gnome-power-manager
+aptitude purge libgnome-desktop-3-12
+aptitude purge gnome-bluetooth
+aptitude purge gnome-menus
+aptitude purge libgnome-bluetooth13
+aptitude purge gnome-video-effects
+aptitude purge thunderbird-gnome-support
+
+
+###内核更新（根据需要进行）
+1）livecd内核更新(如果你在之前的步骤中更新了内核，那么务必要做以下操作)
+（在chroot外执行）(sudo) rm /home/bseazeng/live/extract-cd/casper/initrd.lz
+（在chroot外执行）(sudo) rm /home/bseazeng/live/extract-cd/casper/vmlinuz
+（在chroot外执行）(sudo) cp ~/live/edit/boot/vmlinuz-2.6.31-19-generic ~/live/extract-cd/
+casper/
+（在chroot外执行）(sudo) mv ~/live/extract-cd/casper/vmlinuz-2.6.31-19-generic  ~/live/
+extract-cd/casper/vmlinuz
+（在chroot外执行）(sudo) cp ~/live/edit/boot/initrd.img-2.6.31-19-generic ~/ 
+cd ~/
+（在chroot外执行）sudo mv ~/initrd.img-2.6.31-19-generic initrd.gz
+ 
+2）解压gz文件并再压缩为lz格式：
+（在chroot外执行）(sudo) gzip -dc initrd.gz | sudo lzma -7 > initrd.lz
+（在chroot外执行）(sudo) mv initrd.lz~/live/extract-cd/casper/
+（在chroot外执行）(sudo) rm -rf initrd.gz
+
+16、退出chroot：
+1）清理aptitude缓存：
+apt-get autoremove
+apt-get autoclean
+aptitude clean
+ 
+2）删除临时文件和nameserver设置：
+rm -rf /tmp/* ~/.bash_history
+rm /etc/resolv.conf
+ 
+3）如果安装了软件，应该在chroot内执行
+rm /var/lib/dbus/machine-id
+rm /sbin/initctl
+dpkg-divert --rename --remove /sbin/initctl
+ 
+4）umount曾挂载的目录：
+umount /proc
+umount /sys
+umount /dev/pts
+ 
+5）退出chroot：
+exit
+
+17、制作根文件系统，具体如下：
+1）重新生成manifest及manifest-desktop文件：
+rm extract-cd/casper/filesystem.manifest extract-cd/casper/filesystem.manifest-desktop
+(sudo) chroot edit dpkg-query -W --showformat='${Package}${Version}\n' > extract-cd/casper/filesystem.manifest
+sudo cp extract-cd/casper/filesystem.manifestextract-cd/casper/filesystem.manifest-desktop
+sudo sed -i '/ubiquity/d'extract-cd/casper/filesystem.manifest-desktop
+sudo sed -i '/casper/d'extract-cd/casper/filesystem.manifest-desktop
+     根据manifest生成manifest-desktop也有另一方式：
+    (sudo) chroot chroot dpkg-query -W --showformat='${Package}${Version}\n' | sudo tee image/casper/filesystem.manifest
+(sudo) cp -v image/casper/filesystem.manifestimage/casper/filesystem.manifest-desktop
+REMOVE='ubiquity ubiquity-frontend-gtk ubiquity-frontend-kde casperlupin-casper live-initramfs user-setup discover1 xresprobe os-proberlibdebian-installer4'  (要删除的包名)
+for i in $REMOVE
+do
+       (sudo) sed -i "/${i}/d"image/casper/filesystem.manifest-desktop
+done
+修改filesystem.size
+printf$(du -sx --block-size=1edit | cut -f1) >extract-cd/casper/filesystem.size
+ 
+2）压缩文件系统：
+(sudo) rm extract-cd/casper/filesystem.squashfs
+(sudo) mksquashfs edit extract-cd/casper/filesystem.squashfs-noappend
+ 
+3）在 extract-cd/README.diskdefines 中添加镜像的名称
+(sudo) vi extract-cd/README.diskdefines
+ 
+4）删除旧的md5sum.txt文件并计算新的md5码
+cd extract-cd
+rm md5sum.txt
+find -type f -print0 | sudo xargs -0 md5sum | grep -v isolinux/boot.cat | sudo tee md5sum.txt
+ 
+5）创建ISO
+mkisofs -D -r -V "ubuntumate" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o /home/bseazeng/umate/ubuntu-bseazeng-17.iso -eltorito-alt-boot -b boot/grub/efi.img -no-emul-boot /home/bseazeng/live/extract-cd/
+ 
+注意：
+①复制文件的时候会遗漏.disk文件夹，会导致iso找不到安装光盘，所以制作启动光盘前务必确保.disk文件夹复制到umate目录下，执行 cp -fR .disk//home/bseazeng/umate/
+②如果要在 efi 启动，需要添加如下参数： 
+-eltorito-alt-boot -b boot/grub/efi.img -no-emul-boot
+ 
+说明：
+-c:cat文件
+制作启动光盘时，mkisofs会将开机映像文件中的全-eltorito-catalog*文件的全部内容作成一个文件
+-b:启动image
+指定在制作启动光盘时所需的开机映像文件
+-V
+Set Volume ID
+-o
+设置输出文件
+-r
+Joliet是用于在 Windows 环境下使用的光盘
+ 
+18、测试CD
+用vmware或者virtualbox虚拟机测试（具体根据自己条件选择相应测试工具即可）。在改变livecd系统内核后虚拟运行中会出现一些疑难问题。如果你遇到了，那么在启动界面出现时按一下F6键。引动光标到splashquite和--之间并键入：all_generic_ide
+ 
+19、烧录CD
+cdrecord dev=/dev/cdrom yeelen_ubuntu-9.10-desktop-i386.iso
+当然也可以使用烧录工具将镜像烧录即可。
+ 
+20、注意事项
+1）官方教程中的压缩根文件系统和制作iso镜像有点问题，采用本文中的方法即可。
+官方教程：https://help.ubuntu.com/community/LiveCDCustomization.
+2）uname的问题。执行uname输出信息信息有包含Ubuntu的信息（内核版本），简单的解决方法是：先将/bin/uname命名为/bin/.uname,之后编写一个/bin/uname,内容如下：
+#!/bin/bash
+ 
+#***************************
+# shell script of uname
+#***************************
+ 
+.uname $@ | sed "s/Ubuntu/xxxx/g"
+ 
+exit
+     实际上就是将输出信息中的Ubuntu修改为xxxx，之后输出即可。
+21、efi引导（参考centos7文档）
+为了兼容 mbr 方式和 EFI 方式，同时创建了 /boot 和 /boot/efi 分区。
+3 配置 mbr 引导方式
+编辑 isoliuux 目录下的 isolinux.cfg 文件，添加自己的内容，在 isolinux.cfg 文件中 label linux 下面添加自己的 label ：
+label linux
+ menu label ^Install CentOS 7
+ kernel vmlinuz
+ append initrd=initrd.img inst.stage2=hd:LABEL=CENTOS7 quiet
+ 
+label custom
+ menu label ^Custom CentOS 7 by xiaoli110
+ kernel vmlinuz
+ append initrd=initrd.img inst.stage2=hd:LABEL=CENTOS7inst.ks=cdrom:/isolinux/ks.cfg
+注意点：
+1 ） memu label 后面的内容是在光盘引导起来菜单的内容， ^ 后面的字母是菜单的快捷键；
+2 ）通过 inst.ks 关键字指明 ks.cfg 文件位置；
+3 ） inst.stages2 标识的是系统按照介质位置，这里使用 hd:LABEL 表明寻找的是 label 为 CENTOS7 的安装介质，使用 LABEL 关键字的好处是可以精确指定安装介质，为什么 label 是 CENTOS7 ，是因为我在制作光盘镜像的时候指定的，方法在后面有介绍。
+4 配置 EFI 引导方式
+1 ） EFI 简介
+EFI 可扩展固件接口（ ExtensibleFirmware Interface 的缩写），是英特尔主导推出的一种替代 BIOS 的升级方案。最早由英特尔开发，于 2005 年将此规范格式交由 UEFI论坛来推广与发展，后来并更改名称为 Unified EFI(UEFI) 。 UEFI 论坛于 2007 年 1 月 7 日释出并发放 2.1 版本的规格，其中增加与改进了加密编码（ cryptography ）、网络认证（ network authentication ）与用户接口架构（ User InterfaceArchitecture ）。
+EFI 是用模块化， C 语言风格的参数堆栈传递方式，动态链接的形式构建的系统，较 BIOS 而言更易于实现，容错和纠错特性更强，缩短了系统研发的时间。
+EFI 在概念上非常类似于一个低阶的操作系统，并且具有操控所有硬件资源的能力。
+2 ）配置 EFI 引导
+进入光盘目录EFI/BOOT/ ，编辑 grub.cfg 文件，添加自己的菜单： 
+menuentry 'Install CentOS 7' --class Fedora--class gnu-linux--class gnu --class os {
+  linuxefi /images/pxeboot/vmlinuz inst.stage2=hd:LABEL=CENTOS7 quiet
+  initrdefi /images/pxeboot/initrd.img
+}
+menuentry 'Install CentOS 7 custom byxiaoli110' --class fedora --classgnu-linux --class gnu --class os {
+  linuxefi /images/pxeboot/vmlinuzinst.ks=cdrom:/isolinux/ks.cfginst.stage2=hd:LABEL=CENTOS7 quiet
+  initrdefi /images/pxeboot/initrd.img
+}
+
+和 mbr 方式类似，指明 ks.cfg 文件位置和安装源位置。
