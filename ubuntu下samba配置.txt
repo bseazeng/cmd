@@ -1,0 +1,12 @@
+sudo apt-get install -y samba
+vi /etc/samba/smb.conf
+{
+[DiskShare]
+   comment = DiskShare_sdb
+   path = /sdb/
+   browseable = yes
+   writable = yes
+   directory mask = 0755
+}
+sudo smbpasswd -a zh
+sudo service smbd restart
